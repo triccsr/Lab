@@ -1,7 +1,7 @@
 #ifndef ID_TRIE_H
 #define ID_TRIE_H
 #include <string.h>
-#include "error_def.h"
+#include "def.h"
 #include "parse_tree.h"
 #include <stddef.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
 #include "ID_trie.h"
-#include "error_def.h"
+#include "def.h"
 #include "parse_tree.h"
 #include "stddef.h"
 #include "stdbool.h"

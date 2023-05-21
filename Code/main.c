@@ -1,6 +1,6 @@
 #include "syntax.tab.h"
 #include "parse_tree.h"
-#include "error_def.h"
+#include "def.h"
 #include <stdio.h>
 extern int hasError;
 extern int prevErrorType;

@@ -1,5 +1,5 @@
 #include "ID_trie.h"
-#include "error_def.h"
+#include "def.h"
 #include <stdlib.h>
 
 //bool can_assign(struct VarListNode *a, struct VarListNode *b) {

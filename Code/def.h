@@ -32,6 +32,7 @@ struct VarNameListNode {
 struct IROpr {
   enum { IROPR_DEFVAR = 0, IROPR_TMPVAR, IROPR_NUM, IROPR_LABEL,IROPR_FUNC } oprType;
   int val;
+  bool addrOf;
 };
 
 struct FuncNode {
@@ -72,7 +73,7 @@ enum IRType {
   IRTYPE_MINUS,
   IRTYPE_MUL,
   IRTYPE_DIV,
-  IRTYPE_VA,
+  //IRTYPE_VA,
   IRTYPE_VL,
   IRTYPE_LV,
   IRTYPE_GOTO,

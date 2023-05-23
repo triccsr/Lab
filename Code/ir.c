@@ -28,22 +28,34 @@ struct IROpr new_tmp_var(){
   struct IROpr ret;
   ret.oprType=IROPR_TMPVAR;
   ret.val=tmpVarCount++;
+  ret.addrOf=false;
   return ret;
 }
 struct IROpr new_def_var(){
   struct IROpr ret;
   ret.oprType=IROPR_DEFVAR;
   ret.val=defVarCount++;
+  ret.addrOf=false;
   return ret;
 }
 struct IROpr new_num(int v){
-  return (struct IROpr){IROPR_NUM,v};
+  return (struct IROpr){IROPR_NUM,v,false};
 }
 struct IROpr new_label(){
-  return (struct IROpr){IROPR_LABEL,labelCount++};
+  return (struct IROpr){IROPR_LABEL,labelCount++,false};
 }
 struct IROpr new_func(){
-  return (struct IROpr){IROPR_FUNC,funcCount++};
+  return (struct IROpr){IROPR_FUNC,funcCount++,false};
+}
+struct IROpr get_addr_of_var(struct IROpr varIROpr){
+  assert(varIROpr.oprType==IROPR_DEFVAR||varIROpr.oprType==IROPR_TMPVAR);
+  varIROpr.addrOf=true;
+  return varIROpr;
+}
+struct IROpr remove_addr(struct IROpr addrIROpr){
+  assert(addrIROpr.addrOf==true);
+  addrIROpr.addrOf=false;
+  return addrIROpr;
 }
 
 struct IRListPair append_IRNode(struct IRListPair irList,struct IRNode* irNode){
@@ -76,7 +88,7 @@ struct IRListPair new_single_IRList(enum IRType irType,int argc,...){
       newIRNode->x=va_arg(irOprs, struct IROpr);
       break;
     case IRTYPE_ASSIGN:
-    case IRTYPE_VA:
+    //case IRTYPE_VA:
     case IRTYPE_VL:
     case IRTYPE_LV:
     case IRTYPE_DEC:
@@ -101,6 +113,8 @@ struct IRListPair new_single_IRList(enum IRType irType,int argc,...){
       newIRNode->y=va_arg(irOprs, struct IROpr);
       newIRNode->z=va_arg(irOprs, struct IROpr);
       break;
+    default:
+      assert(0);
   }
   va_end(irOprs);
   struct IRListPair irList;
@@ -164,8 +178,9 @@ struct LookupType lookup(struct TreeNode *exp){
     get_size_of(ret.type);
     ret.irList=cat_IRList(2,ret.irList,new_single_IRList(IRTYPE_MUL,3,offsetIROpr,indexIROpr,new_num(ret.type->sizeOf))); //offsetIROpr=indexIROpr*ret.type->sizeOf
     if(lookupArray.irPos.type==IRPOS_VAR){
+      assert(0);
       struct IROpr arrayAddrIROpr=new_tmp_var();
-      ret.irList=cat_IRList(2,ret.irList,new_single_IRList(IRTYPE_VA,2,arrayAddrIROpr,lookupArray.irPos.irOpr));//arrayAddrIROpr=&lookupArray.irPos.irOpr
+      ret.irList=cat_IRList(2,ret.irList,new_single_IRList(IRTYPE_ASSIGN,2,arrayAddrIROpr,get_addr_of_var(lookupArray.irPos.irOpr)));//arrayAddrIROpr=&lookupArray.irPos.irOpr
       ret.irList=cat_IRList(2,ret.irList,new_single_IRList(IRTYPE_PLUS,3,ret.irPos.irOpr,arrayAddrIROpr,offsetIROpr));//ret.irPos.irOpr=arrayAddrIROpr+offsetIROpr
     } 
     else{
@@ -246,7 +261,8 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
           id.irList=cat_IRList(2,id.irList,new_single_IRList(IRTYPE_ASSIGN,2,place,id.irPos.irOpr));
         }
         else{
-          id.irList=cat_IRList(2,id.irList,new_single_IRList(IRTYPE_VA,2,place,id.irPos.irOpr));
+          assert(0);
+          // id.irList=cat_IRList(2,id.irList,new_single_IRList(IRTYPE_VA,2,place,id.irPos.irOpr));
         }
       }
       else{//IRPOS_ADDR
@@ -287,25 +303,27 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
       get_size_of(src.type);
       int sz = min(dst.type->sizeOf, src.type->sizeOf);
 
-      struct IROpr dstAddrOpr = new_tmp_var(), srcAddrOpr = new_tmp_var();
+      /*struct IROpr dstAddrOpr = new_tmp_var(), srcAddrOpr = new_tmp_var();
 
       if (dst.irPos.type == IRPOS_VAR) {
-        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_VA, 2, dstAddrOpr, dst.irPos.irOpr));
+        assert(0);
+        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_ASSIGN, 2, dstAddrOpr, get_addr_of_var(dst.irPos.irOpr)));
       } else {//dst.irPos.type==IRPOS_ADDR
         retList=cat_IRList(2,retList,new_single_IRList(IRTYPE_ASSIGN,2,dstAddrOpr,dst.irPos.irOpr));
       }
 
       if (src.irPos.type == IRPOS_VAR) {
-        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_VA, 2, srcAddrOpr, src.irPos.irOpr));
+        assert(0);
+        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_ASSIGN, 2, srcAddrOpr, get_addr_of_var(src.irPos.irOpr)));
       } else {//src.irPos.type==IRPOS_ADDR
         retList=cat_IRList(2,retList,new_single_IRList(IRTYPE_ASSIGN,2,srcAddrOpr,src.irPos.irOpr));
-      }
+      }*/
 
       for (int i = 0; i < (sz >> 2); ++i) {
         struct IROpr t1=new_tmp_var(),t2=new_tmp_var(),t3=new_tmp_var();
         struct IROpr offset=new_num(i<<2);
-        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_PLUS, 3, t1, dstAddrOpr, offset));  // t1=dstAddrOpr + i*4
-        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_PLUS, 3, t2, srcAddrOpr, offset));  // t2=srcAddrOpr + i*4
+        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_PLUS, 3, t1, dst.irPos.irOpr, offset));  // t1=dstAddrOpr + i*4
+        retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_PLUS, 3, t2, src.irPos.irOpr, offset));  // t2=srcAddrOpr + i*4
         retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_VL, 2, t3, t2));                      // t3=*t2
         retList = cat_IRList(2, retList, new_single_IRList(IRTYPE_LV, 2, t1, t3));                      //*t1=t3
       }
@@ -437,16 +455,18 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
 }
 
 
-void undefine_DefList(struct TreeNode *deflist){
-
-}
-
 struct TrieNode *define_VarDec(struct TreeNode *vardec){
   if(childrens_are(vardec,"ID")){
     struct TreeNode *id=get_kth_child(vardec,1);
     struct TrieNode *idTrieNode=find_name(varRoot,id->detail);
-    idTrieNode->outPtr.varDefHead->irPos.type=IRPOS_VAR;
-    idTrieNode->outPtr.varDefHead->irPos.irOpr=new_def_var();
+    if(idTrieNode->outPtr.varDefHead->type->kind==BASIC){
+      idTrieNode->outPtr.varDefHead->irPos.type=IRPOS_VAR;
+      idTrieNode->outPtr.varDefHead->irPos.irOpr=new_def_var();
+    }
+    else{
+      idTrieNode->outPtr.varDefHead->irPos.type=IRPOS_ADDR;
+      idTrieNode->outPtr.varDefHead->irPos.irOpr=get_addr_of_var(new_def_var());
+    }
     return idTrieNode;
   }
   else{//VarDec LB INT RB
@@ -461,7 +481,7 @@ struct IRListPair DecList2IR(struct TreeNode *declist){
   get_size_of(newVar->outPtr.varDefHead->type);
   struct IRListPair code=(struct IRListPair){NULL,NULL};
   if(newVar->outPtr.varDefHead->type->kind!=BASIC){
-    code=new_single_IRList(IRTYPE_DEC,2,newVar->outPtr.varDefHead->irPos.irOpr,new_num(newVar->outPtr.varDefHead->type->sizeOf));
+    code=new_single_IRList(IRTYPE_DEC,2,remove_addr(newVar->outPtr.varDefHead->irPos.irOpr),new_num(newVar->outPtr.varDefHead->type->sizeOf));
   }
   if(childrens_are(dec,"VarDec ASSIGNOP Exp")){// Dec=VarDec ASSIGNOP Exp
     struct IRListPair code2=Exp2IR(get_kth_child(dec,3),newVar->outPtr.varDefHead->irPos.irOpr,true);
@@ -607,6 +627,7 @@ struct IRListPair Program2IR(struct TreeNode *program){
 }
 
 void print_IROpr(struct IROpr iropr){
+  if(iropr.addrOf==true)printf("&");
   switch (iropr.oprType) {
     case IROPR_DEFVAR:
       printf("v%d",iropr.val);
@@ -694,11 +715,11 @@ void print_IR(struct IRListPair irList){
         printf(" / ");
         print_IROpr(irNode->z);
         break;
-      case IRTYPE_VA:
+      /*case IRTYPE_VA:
         print_IROpr(irNode->x);
         printf(" := &");
         print_IROpr(irNode->y);
-        break;
+        break;*/
       case IRTYPE_VL:
         print_IROpr(irNode->x);
         printf(" := *");

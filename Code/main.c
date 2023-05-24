@@ -2,11 +2,21 @@
 #include "parse_tree.h"
 #include "def.h"
 #include <stdio.h>
+#include "opt_input.h"
+#include "ir.h"
 extern int hasError;
 extern int prevErrorType;
 void check_program();
 void lab3();
 bool has_struct(struct TreeNode *now);
+
+void opt(const char *inputFileName,const char *outputFileName){
+  struct IRListPair ir=file_to_IRList(inputFileName);
+  freopen(outputFileName,"w",stdout);
+  print_IR(ir);
+  fclose(stdout);
+}
+/*
 int main(int argc, char **argv) {
 #ifdef YYDEBUG
     extern int yydebug;
@@ -35,5 +45,13 @@ int main(int argc, char **argv) {
     lab3();
     fclose(stdout);
   }
+  return 0;
+}
+*/
+int main(int argc,char **argv){
+  if(argc!=3){
+    return 1;
+  } 
+  opt(argv[1],argv[2]);
   return 0;
 }

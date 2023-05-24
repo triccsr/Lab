@@ -63,6 +63,7 @@ union OutPtr {
   struct TypeNode *type;
   struct FuncNode funcInfo;
   struct VarDefNode *varDefHead;
+  struct IROpr lab5IROpr;
 };
 
 enum IRType {

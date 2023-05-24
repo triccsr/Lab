@@ -1,6 +1,8 @@
 #include "ID_trie.h"
 #include "def.h"
 #include <stdlib.h>
+#include <stddef.h>
+#include <assert.h>
 
 //bool can_assign(struct VarListNode *a, struct VarListNode *b) {
   //if (a->typeName != b->typeName)return false;
@@ -23,6 +25,7 @@ struct TrieNode *
 insert_name(struct TrieNode *trieRoot,
             const char s[]) { // insert a word to trie rooted trieRoot, return
                               // the last trieNode
+  assert(trieRoot!=NULL);
   struct TrieNode *now = trieRoot;
   int strLen = strlen(s);
   for (int i = 0, childIndex; i < strLen; ++i) {
@@ -36,6 +39,7 @@ insert_name(struct TrieNode *trieRoot,
   return now;
 }
 struct TrieNode *find_name(struct TrieNode *trieRoot, const char s[]) {
+  if(trieRoot==NULL)return  NULL;
   struct TrieNode *target = NULL;
   struct TrieNode *now = trieRoot;
   int len = strlen(s);

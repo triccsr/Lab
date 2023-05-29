@@ -90,10 +90,13 @@ enum IRType {
 
 struct IRNode {
   enum IRType irType;
+  int argNum;
   struct IROpr x, y, z;
   enum RelopEnum relop;
   struct IRNode *prv;
   struct IRNode *nxt;
+  struct CfgNode* inCfgNode;
+  bool deleted;
 };
 
 struct IRListPair {

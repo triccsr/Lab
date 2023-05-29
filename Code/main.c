@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "opt_input.h"
 #include "ir.h"
+#include "lab5.h"
 extern int hasError;
 extern int prevErrorType;
 void check_program();
@@ -49,9 +50,10 @@ int main(int argc, char **argv) {
 }
 */
 int main(int argc,char **argv){
-  if(argc!=3){
+  /*if(argc!=3){
     return 1;
   } 
-  opt(argv[1],argv[2]);
+  opt(argv[1],argv[2]);*/
+  lab5_work(argc,argv);
   return 0;
 }

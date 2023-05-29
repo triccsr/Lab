@@ -85,6 +85,7 @@ struct IRListPair new_single_IRList(enum IRType irType,int argc,...){
     case IRTYPE_READ:
     case IRTYPE_WRITE:
       assert(argc==1);
+      newIRNode->argNum=1;
       newIRNode->x=va_arg(irOprs, struct IROpr);
       break;
     case IRTYPE_ASSIGN:
@@ -94,6 +95,7 @@ struct IRListPair new_single_IRList(enum IRType irType,int argc,...){
     case IRTYPE_DEC:
     case IRTYPE_CALL:
       assert(argc==2);
+      newIRNode->argNum=2;
       newIRNode->x=va_arg(irOprs, struct IROpr);
       newIRNode->y=va_arg(irOprs,struct IROpr);
       break;
@@ -102,12 +104,14 @@ struct IRListPair new_single_IRList(enum IRType irType,int argc,...){
     case IRTYPE_MUL:
     case IRTYPE_DIV:
       assert(argc==3);
+      newIRNode->argNum=3;
       newIRNode->x=va_arg(irOprs, struct IROpr);
       newIRNode->y=va_arg(irOprs, struct IROpr);
       newIRNode->z=va_arg(irOprs, struct IROpr);
       break;
     case IRTYPE_IFGOTO:
       assert(argc==4);
+      newIRNode->argNum=3;
       newIRNode->x=va_arg(irOprs, struct IROpr);
       newIRNode->relop=va_arg(irOprs,enum RelopEnum);
       newIRNode->y=va_arg(irOprs, struct IROpr);
@@ -138,8 +142,6 @@ struct IRListPair cat_IRList(int listNum,...){
     }
     else if(ret.tail!=NULL){
       ret.tail->nxt=nList.head;
-    }
-    else if(nList.head!=NULL){
       nList.head->prv=ret.tail;
     }
     ret.tail=nList.tail;
@@ -674,6 +676,7 @@ void print_relop(enum RelopEnum relop){
 
 void print_IR(struct IRListPair irList){
   for(struct IRNode *irNode=irList.head;irNode!=NULL;irNode=irNode->nxt){
+    if(irNode->deleted==true)continue;
     switch (irNode->irType) {
       case IRTYPE_LABEL:
         printf("LABEL label%d :",irNode->x.val);

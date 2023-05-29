@@ -44,12 +44,13 @@ struct IROpr lab5_get_var_IROpr(const char *token){
   struct TrieNode * varName=find_name(lab5VarTrieRoot,token+offset);
   if(varName==NULL){
     varName=insert_name(lab5VarTrieRoot,token+offset);
-    if(token[offset]=='t'){
+    /*if(token[offset]=='t'){
       varName->outPtr.lab5IROpr=lab5_new_tmp();
     }
     else{
       varName->outPtr.lab5IROpr=lab5_new_var();
-    }
+    }*/
+    varName->outPtr.lab5IROpr=lab5_new_var();
   }
   struct IROpr ret=varName->outPtr.lab5IROpr;
   ret.addrOf=(bool)offset;

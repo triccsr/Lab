@@ -29,7 +29,7 @@ bool useful_variables_update_out(struct Cfg cfg,struct CfgNode* cfgNode){
   for(struct CfgEdge *e=cfgNode->firstOutEdge;e!=NULL;e=e->next){
     for(int i=0;i<bitsetLen;++i){
       uint64_t tmp=cfgNode->outInfoPtr.usefulVarBitSet[i];
-      cfgNode->outInfoPtr.usefulVarBitSet[i]|=e->to->outInfoPtr.usefulVarBitSet[i];
+      cfgNode->outInfoPtr.usefulVarBitSet[i]|=e->to->inInfoPtr.usefulVarBitSet[i];
       if(tmp!=cfgNode->outInfoPtr.usefulVarBitSet[i]){
         diff=true;
       }
@@ -41,7 +41,7 @@ void useful_variables_update_in_from_out(struct Cfg cfg,struct CfgNode* cfgNode)
   int bitsetLen=get_bitset_len(cfg.defVarMaxIndex+cfg.tmpVarMaxIndex+2);
   memcpy(cfgNode->inInfoPtr.usefulVarBitSet,cfgNode->outInfoPtr.usefulVarBitSet,bitsetLen*sizeof(uint64_t));
   uint64_t *inSet=cfgNode->inInfoPtr.usefulVarBitSet;
-  for(struct IRNode *ir=cfgNode->basicBlock.tail;ir!=NULL;ir=ir->prv){
+  for(struct IRNode *ir=cfgNode->basicBlock.tail;ir!=cfgNode->basicBlock.head->prv;ir=ir->prv){
     switch (ir->irType) {
       case IRTYPE_ARG:
       case IRTYPE_WRITE:
@@ -142,18 +142,18 @@ bool irtype_modify(enum IRType t){
 }
 
 void intra_basicblock_optimization(struct Cfg cfg){
-  struct VarConstInfo *varConstInfo=calloc(cfg.defVarMaxIndex+1,sizeof(struct VarConstInfo));
+  struct VarConstInfo *varConstInfo=calloc(cfg.defVarMaxIndex+3,sizeof(struct VarConstInfo));
   for(struct CfgNode *cfgNode=cfg.entry;cfgNode!=NULL;cfgNode=cfgNode->nextCfgNode){
     for(int i=0;i<=cfg.defVarMaxIndex;++i){
       varConstInfo[i].type=VAR_UNDEF;
     }
-    for(struct IRNode *ir=cfgNode->basicBlock.head;ir!=NULL;ir=ir->nxt){
+    for(struct IRNode *ir=cfgNode->basicBlock.head;ir!=NULL&&ir->inCfgNode==cfgNode;ir=ir->nxt){
       switch (ir->irType) {
         case IRTYPE_PLUS:
         case IRTYPE_MINUS:
         case IRTYPE_MUL:
         case IRTYPE_DIV:
-          for(struct IRNode *tmpIR=ir->prv;tmpIR!=NULL;tmpIR=tmpIR->prv){
+          for(struct IRNode *tmpIR=ir->prv;tmpIR!=NULL&&tmpIR->inCfgNode==cfgNode;tmpIR=tmpIR->prv){
             if(tmpIR->irType==ir->irType&&same_IROpr(tmpIR->y,ir->y)&&same_IROpr(tmpIR->z,ir->z)){
               ir->irType=IRTYPE_ASSIGN;
               ir->argNum=1;
@@ -167,7 +167,7 @@ void intra_basicblock_optimization(struct Cfg cfg){
           break;
         case IRTYPE_ASSIGN:
         case IRTYPE_LV:
-          for(struct IRNode *tmpIR=ir->prv;tmpIR!=NULL;tmpIR=tmpIR->prv){
+          for(struct IRNode *tmpIR=ir->prv;tmpIR!=NULL&&tmpIR->inCfgNode==cfgNode;tmpIR=tmpIR->prv){
             if(tmpIR->irType==IRTYPE_ASSIGN&&same_IROpr(tmpIR->x,ir->y)){
               ir->y=tmpIR->y;
               break;
@@ -183,7 +183,7 @@ void intra_basicblock_optimization(struct Cfg cfg){
         case IRTYPE_PLUS:
         case IRTYPE_MINUS:
         case IRTYPE_MUL:
-        case IRTYPE_DIV:
+        case IRTYPE_DIV:{
           if(ir->y.oprType==IROPR_DEFVAR&&varConstInfo[ir->y.val].type==VAR_CONST){
             ir->y.oprType=IROPR_NUM;
             ir->y.val=varConstInfo[ir->y.val].val;
@@ -193,31 +193,57 @@ void intra_basicblock_optimization(struct Cfg cfg){
             ir->z.val=varConstInfo[ir->z.val].val;
           }
           if(ir->y.oprType==IROPR_NUM&&ir->z.oprType==IROPR_NUM){
+            int rvalue=0;
+            bool mathError=false;
             switch(ir->irType){
               case IRTYPE_PLUS:
-                ir->y.val+=ir->z.val;
+                rvalue=(ir->y.val)+(ir->z.val);
                 break;
               case IRTYPE_MINUS:
-                ir->y.val-=ir->z.val;
+                rvalue=(ir->y.val)-(ir->z.val);
                 break;
               case IRTYPE_MUL:
-                ir->y.val*=ir->z.val;
+                rvalue=(ir->y.val)*(ir->z.val);
                 break;
-              case IRTYPE_DIV:
-                ir->y.val/=ir->z.val;
-              break;
+              case IRTYPE_DIV:{
+                int a=ir->y.val,b=ir->z.val;
+                if(b==0){
+                  mathError=true;
+                  break;
+                }
+                bool op=0;
+                if(a<0){
+                  op=!op;
+                  a=-a;
+                }
+                if(b<0){
+                  op=!op;
+                  b=-b;
+                }
+                if(op){
+                  rvalue=-((a+b-1)/b);
+                }
+                else{
+                  rvalue=a/b;
+                }
+                break;
+              }
               default:
                 assert(0);
             }
-            ir->irType=IRTYPE_ASSIGN;
-            ir->argNum=1;
-            varConstInfo[ir->x.val].type=VAR_CONST;
-            varConstInfo[ir->x.val].val=ir->y.val;
+            if(!mathError){
+              ir->irType=IRTYPE_ASSIGN;
+              ir->argNum=1;
+              varConstInfo[ir->x.val].type=VAR_CONST;
+              varConstInfo[ir->x.val].val=rvalue;
+              ir->y.val=rvalue;
+            }
           }
           else{
             varConstInfo[ir->x.val].type=VAR_NAC; 
           }
           break;
+        }
         case IRTYPE_ASSIGN:
           if(ir->y.oprType==IROPR_NUM){
             varConstInfo[ir->x.val].type=VAR_CONST;

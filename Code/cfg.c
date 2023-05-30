@@ -22,7 +22,7 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
   struct Cfg res=(struct Cfg){NULL,NULL,0,0,0};
   res.exit=calloc(1,sizeof(struct CfgNode));
   res.labelNum=0;
-  for(struct IRNode *irNode=funcIR.head;irNode!=NULL;irNode=irNode->nxt){
+  for(struct IRNode *irNode=funcIR.head;irNode!=funcIR.tail->nxt;irNode=irNode->nxt){
     if(irNode->irType==IRTYPE_LABEL){
       if(res.labelNum<irNode->x.val+1){
         res.labelNum=irNode->x.val+1;
@@ -41,7 +41,7 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
 
   struct CfgNode *nowCfgNode=NULL;
   struct CfgNode* *labelIsIn=calloc(res.labelNum,sizeof(struct CfgNode*));
-  for(struct IRNode *irNode=funcIR.head;irNode!=NULL;irNode=irNode->nxt){
+  for(struct IRNode *irNode=funcIR.head;irNode!=funcIR.tail->nxt;irNode=irNode->nxt){
     if(nowCfgNode==NULL){// the first ir token of function
       nowCfgNode=calloc(1,sizeof(struct CfgNode));
       nowCfgNode->basicBlock.head=irNode;
@@ -52,14 +52,14 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
     if(irNode->irType==IRTYPE_LABEL){
       labelIsIn[irNode->x.val]=nowCfgNode;
     }
-    if(irNode->nxt==NULL||(irNode->irType!=IRTYPE_LABEL&&irNode->nxt->irType==IRTYPE_LABEL)||(is_jump(irNode)&&!is_jump(irNode->nxt))){// end of a BB
+    if(irNode==funcIR.tail||(irNode->irType!=IRTYPE_LABEL&&irNode->nxt->irType==IRTYPE_LABEL)||(is_jump(irNode)&&!is_jump(irNode->nxt))){// end of a BB
       nowCfgNode->basicBlock.tail=irNode;
-      if(irNode->nxt!=NULL){
+      if(irNode!=funcIR.tail){
         struct CfgNode *nextCfgNode=calloc(1,sizeof(struct CfgNode));
         nextCfgNode->basicBlock.head=irNode->nxt;
         nextCfgNode->index=nowCfgNode->index+1;
         nowCfgNode->nextCfgNode=nextCfgNode;
-        if(irNode->irType==IRTYPE_IFGOTO){
+        if(irNode->irType!=IRTYPE_GOTO&&irNode->irType!=IRTYPE_RETURN){
           add_cfg_edge(nowCfgNode,nextCfgNode);
         }
         nowCfgNode=nextCfgNode;
@@ -67,12 +67,12 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
       else {
         nowCfgNode->nextCfgNode=res.exit;
       }
-      if (irNode->nxt==NULL||irNode->irType == IRTYPE_RETURN) {
+      if (irNode==funcIR.tail||irNode->irType == IRTYPE_RETURN) {
         add_cfg_edge(nowCfgNode, res.exit);
       }
     }
   }
-  for(struct IRNode *irNode=funcIR.head;irNode!=NULL;irNode=irNode->nxt){//GOTO label or IFGOTO label
+  for(struct IRNode *irNode=funcIR.head;irNode!=funcIR.tail->nxt;irNode=irNode->nxt){//GOTO label or IFGOTO label
     if(irNode->irType==IRTYPE_GOTO){// GOTO x
       add_cfg_edge(irNode->inCfgNode,labelIsIn[irNode->x.val]);
     }

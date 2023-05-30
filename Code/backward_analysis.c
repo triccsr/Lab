@@ -6,7 +6,7 @@ void backward_analysis(struct Cfg cfg,void (*init_in_out)(struct Cfg cfg,struct 
   for(struct CfgNode *cfgNode=cfg.entry;cfgNode!=NULL;cfgNode=cfgNode->nextCfgNode){
     if(cfgNode!=cfg.exit){
       init_in_out(cfg,cfgNode);
-      //update_in_from_out(cfgNode); 
+      update_in_from_out(cfg,cfgNode); 
     }
   }
   init_exit_in(cfg,cfg.exit);

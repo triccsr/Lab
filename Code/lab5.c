@@ -4,29 +4,30 @@
 #include "def.h"
 #include "opt_g.h"
 #include "opt_input.h"
+#include "ir.h"
 void print_IR(struct IRListPair ir);
 
 void optimize_func_IR(struct IRListPair funcIR){
+  freopen("/dev/tty","w",stdout);
   struct Cfg cfg=function_IR_to_CFG(funcIR);
-  printf("orginal func IR: -------------\n");
-  print_IR(funcIR);
+  // printf("orginal func IR: -------------\n");
+  // print_IR(funcIR);
 
   intra_basicblock_optimization(cfg);
-  printf("intra basicblock fuc IR: -------------\n");
-  print_IR(funcIR);
+  // printf("intra basicblock fuc IR: -------------\n");
+  // print_IR(funcIR);
 
   useful_variables_optimization(cfg);
-  printf("useful variable func IR: -------------\n");
-  print_IR(funcIR);
+  // printf("useful variable func IR: -------------\n");
+  // print_IR(funcIR);
+  fclose(stdout);
 }
-int lab5_work(int argc,char **argv){
-  if(argc!=3){
-    fprintf(stderr,"args error\n");
-    return -1;
-  }
-  struct IRListPair ir=file_to_IRList(argv[1]);
-  printf("input IR: -------------\n");
+int lab5_work(const char* srcIRFile,const char *dstIRFile){
+  struct IRListPair ir=file_to_IRList(srcIRFile);
+  //printf("input IR: -------------\n");
+  freopen("unoptimized.ir","w",stdout);
   print_IR(ir);
+  fclose(stdout);
   struct IRListPair funcIR=(struct IRListPair){NULL,NULL};
   for(struct IRNode *irNode=ir.head;irNode!=NULL;irNode=irNode->nxt){
     if(irNode->irType==IRTYPE_FUNC){
@@ -37,9 +38,10 @@ int lab5_work(int argc,char **argv){
       funcIR.head=irNode;
     }
   }
+  funcIR.tail=ir.tail;
   optimize_func_IR(funcIR);
-  if(argc==3){
-    freopen(argv[2],"w",stdout);
+  if(dstIRFile!=NULL){
+    freopen(dstIRFile,"w",stdout);
     print_IR(ir);
     fclose(stdout);
   }

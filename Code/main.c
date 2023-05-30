@@ -17,7 +17,7 @@ void opt(const char *inputFileName,const char *outputFileName){
   print_IR(ir);
   fclose(stdout);
 }
-/*
+
 int main(int argc, char **argv) {
 #ifdef YYDEBUG
     extern int yydebug;
@@ -42,18 +42,19 @@ int main(int argc, char **argv) {
       printf("cannot translate:\n");
       return 0;
     }
-    freopen(argv[2],"w",stdout);
+    freopen("rawIRFile.ir","w",stdout);
     lab3();
     fclose(stdout);
+    lab5_work("rawIRFile.ir",argv[2]);
   }
   return 0;
 }
-*/
-int main(int argc,char **argv){
-  /*if(argc!=3){
+
+/*int main(int argc,char **argv){
+  if(argc!=3){
     return 1;
   } 
-  opt(argv[1],argv[2]);*/
+  opt(argv[1],argv[2]);
   lab5_work(argc,argv);
   return 0;
-}
+}*/

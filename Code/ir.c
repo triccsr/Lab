@@ -413,7 +413,7 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
     return cat_IRList(2,t.irList,code);
   }
   else if(childrens_are(exp,"Exp RELOP Exp")||childrens_are(exp,"Exp AND Exp")||childrens_are(exp,"Exp OR Exp")||childrens_are(exp,"NOT Exp")){
-    if(!hasPlace)place=(struct IROpr){IROPR_TMPVAR,0};
+    if(!hasPlace)place=(struct IROpr){IROPR_TMPVAR,0,0};
     struct IROpr l1=new_label(),l2=new_label();
     struct IRListPair code0=new_single_IRList(IRTYPE_ASSIGN,2,place,new_num(0));
     struct IRListPair code1=cond2IR(exp,l1,l2);
@@ -513,7 +513,7 @@ struct IRListPair CompSt2IR(struct TreeNode *compst);
 
 struct IRListPair Stmt2IR(struct TreeNode* stmt){
   if(childrens_are(stmt,"Exp SEMI")){
-    return Exp2IR(get_kth_child(stmt,1),(struct IROpr){0,0},false);
+    return Exp2IR(get_kth_child(stmt,1),(struct IROpr){IROPR_TMPVAR,0,0},false);
   }
   if(childrens_are(stmt,"CompSt")){
     return CompSt2IR(get_kth_child(stmt,1));
@@ -588,7 +588,7 @@ struct IRListPair FunDec2IR(struct TreeNode *fundec){
   struct TreeNode *id=get_kth_child(fundec,1);
   struct TrieNode *funcTrieNode=find_name(funcRoot,id->detail);
   if(str_equal(id->detail,"main")){
-    funcTrieNode->outPtr.funcInfo.irOpr=(struct IROpr){IROPR_FUNC,0};
+    funcTrieNode->outPtr.funcInfo.irOpr=(struct IROpr){IROPR_FUNC,0,0};
   }
   else{
     funcTrieNode->outPtr.funcInfo.irOpr=new_func();
@@ -788,6 +788,13 @@ void lab3(){
   if(!cannotTranslate){
     print_IR(irList);
   }
+}
+struct IRListPair get_lab3_ir(){
+  struct IRListPair ir=Program2IR(programParseTree);
+  if(cannotTranslate){
+    return (struct IRListPair){NULL,NULL};
+  }
+  return ir;
 }
 
 bool has_struct(struct TreeNode *now){

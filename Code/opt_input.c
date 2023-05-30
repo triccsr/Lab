@@ -69,7 +69,7 @@ struct IRListPair file_to_IRList(const char fileName[]) {
     char inputLine[512];
     bool ok=fgets(inputLine,512,stdin);
     if(!ok)break;
-    size_t charNum=strlen(inputLine);
+    int charNum=(int)strlen(inputLine);
     char token[6][32];
     int tokenIndex=0,tail=0;
     for(int i=0;i<charNum;++i){
@@ -86,6 +86,9 @@ struct IRListPair file_to_IRList(const char fileName[]) {
       token[tokenIndex][tail]='\0';
       tail=0;
       ++tokenIndex;
+    }
+    for(int i=tokenIndex;i<6;++i){
+      memset(token[i],0,sizeof(token[i]));
     }
     if(str_equal(token[0],"LABEL")){// LABEL l
       struct TrieNode *label=find_name(lab5LabelTrieRoot,token[1]);

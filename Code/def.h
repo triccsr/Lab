@@ -2,6 +2,7 @@
 #define error_def_H
 
 #include "parse_tree.h"
+#include <bits/stdint-uintn.h>
 #include <stddef.h>
 
 struct VarNameListNode;
@@ -15,7 +16,7 @@ struct TypeNode {
     } array;
     struct VarNameListNode *structure;
   } u;
-  unsigned sizeOf;
+  int sizeOf;
 };
 struct VarNameListNode {
   char *name;

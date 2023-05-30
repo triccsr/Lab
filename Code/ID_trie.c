@@ -27,7 +27,7 @@ insert_name(struct TrieNode *trieRoot,
                               // the last trieNode
   assert(trieRoot!=NULL);
   struct TrieNode *now = trieRoot;
-  int strLen = strlen(s);
+  int strLen = (int)strlen(s);
   for (int i = 0, childIndex; i < strLen; ++i) {
     childIndex = child_index(s[i]);
     if (now->child[childIndex] == NULL) {
@@ -40,9 +40,8 @@ insert_name(struct TrieNode *trieRoot,
 }
 struct TrieNode *find_name(struct TrieNode *trieRoot, const char s[]) {
   if(trieRoot==NULL)return  NULL;
-  struct TrieNode *target = NULL;
   struct TrieNode *now = trieRoot;
-  int len = strlen(s);
+  int len = (int)strlen(s);
   for (int i = 0, childIndex; i < len; ++i) {
     childIndex = child_index(s[i]);
     if (now->child[childIndex] == NULL) {

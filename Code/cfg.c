@@ -18,9 +18,16 @@ bool is_jump(struct IRNode *irNode){
   return irNode->irType==IRTYPE_GOTO||irNode->irType==IRTYPE_IFGOTO||irNode->irType==IRTYPE_RETURN;
 }
 
+struct CfgNode* new_CfgNode(struct Cfg* cfg){
+  struct CfgNode* ret=calloc(1,sizeof(struct CfgNode));
+  ret->index=cfg->size++;
+  return ret;
+}
+
 struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
-  struct Cfg res=(struct Cfg){NULL,NULL,0,0,0};
-  res.exit=calloc(1,sizeof(struct CfgNode));
+  struct Cfg res=(struct Cfg){NULL,NULL,0,0,0,0};
+  res.entry=new_CfgNode(&res);
+  res.exit=new_CfgNode(&res);
   res.labelNum=0;
   for(struct IRNode *irNode=funcIR.head;irNode!=funcIR.tail->nxt;irNode=irNode->nxt){
     if(irNode->irType==IRTYPE_LABEL){
@@ -45,8 +52,10 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
     if(nowCfgNode==NULL){// the first ir token of function
       nowCfgNode=calloc(1,sizeof(struct CfgNode));
       nowCfgNode->basicBlock.head=irNode;
-      nowCfgNode->index=0;
-      res.entry=nowCfgNode;
+      nowCfgNode->index=res.size++;
+      res.entry->nextCfgNode=nowCfgNode;
+      nowCfgNode->prevCfgNode=res.entry;
+      add_cfg_edge(res.entry,nowCfgNode);
     }
     irNode->inCfgNode=nowCfgNode;
     if(irNode->irType==IRTYPE_LABEL){
@@ -57,8 +66,9 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
       if(irNode!=funcIR.tail){
         struct CfgNode *nextCfgNode=calloc(1,sizeof(struct CfgNode));
         nextCfgNode->basicBlock.head=irNode->nxt;
-        nextCfgNode->index=nowCfgNode->index+1;
+        nextCfgNode->index=res.size++;
         nowCfgNode->nextCfgNode=nextCfgNode;
+        nextCfgNode->prevCfgNode=nowCfgNode;
         if(irNode->irType!=IRTYPE_GOTO&&irNode->irType!=IRTYPE_RETURN){
           add_cfg_edge(nowCfgNode,nextCfgNode);
         }
@@ -66,6 +76,7 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
       }
       else {
         nowCfgNode->nextCfgNode=res.exit;
+        res.exit->prevCfgNode=nowCfgNode;
       }
       if (irNode==funcIR.tail||irNode->irType == IRTYPE_RETURN) {
         add_cfg_edge(nowCfgNode, res.exit);

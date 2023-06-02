@@ -18,7 +18,7 @@ void opt(const char *inputFileName,const char *outputFileName){
   fclose(stdout);
 }
 
-int main(int argc, char **argv) {
+/*int main(int argc, char **argv) {
 #ifdef YYDEBUG
     extern int yydebug;
     if(YYDEBUG==1)yydebug=1;
@@ -48,13 +48,13 @@ int main(int argc, char **argv) {
     lab5_work("rawIRFile.ir",argv[2]);
   }
   return 0;
-}
+}*/
 
-/*int main(int argc,char **argv){
+int main(int argc,char **argv){
   if(argc!=3){
     return 1;
   } 
-  opt(argv[1],argv[2]);
-  lab5_work(argc,argv);
+  //opt(argv[1],argv[2]);
+  lab5_work(argv[1],argv[2]);
   return 0;
-}*/
+}

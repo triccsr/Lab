@@ -7,12 +7,13 @@ struct CfgNode{
   struct IRListPair basicBlock;
   struct CfgEdge* firstOutEdge;
   struct CfgEdge* firstInEdge;
-  union{
+  struct{
     uint64_t *usefulVarBitSet;
     uint64_t *aliveVarBitSet;
-    uint64_t *dominateBitSet;
 
   }inInfoPtr,outInfoPtr;
+  uint64_t *dominatedBitSet;
+  struct CfgNode *prevCfgNode;
   struct CfgNode *nextCfgNode;
   int index; 
 };
@@ -29,8 +30,10 @@ struct Cfg{
   int labelNum;
   int defVarMaxIndex;
   int tmpVarMaxIndex;
+  int size;
 };
 
+struct CfgNode* new_CfgNode(struct Cfg* cfg);
 void add_cfg_edge(struct CfgNode* src,struct CfgNode* dst);
 struct Cfg function_IR_to_CFG(struct IRListPair funcIR);
 #endif

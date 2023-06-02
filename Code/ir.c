@@ -675,7 +675,7 @@ void print_relop(enum RelopEnum relop){
 }
 
 void print_IR(struct IRListPair irList){
-  for(struct IRNode *irNode=irList.head;irNode!=NULL;irNode=irNode->nxt){
+  for(struct IRNode *irNode=irList.head;irNode!=NULL&&irNode!=irList.tail->nxt;irNode=irNode->nxt){
     if(irNode->deleted==true)continue;
     switch (irNode->irType) {
       case IRTYPE_LABEL:

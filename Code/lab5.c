@@ -5,6 +5,7 @@
 #include "opt_g.h"
 #include "opt_input.h"
 #include "ir.h"
+#include "opt_loop.h"
 void print_IR(struct IRListPair ir);
 
 void optimize_func_IR(struct IRListPair funcIR){
@@ -20,6 +21,7 @@ void optimize_func_IR(struct IRListPair funcIR){
   useful_variables_optimization(cfg);
   // printf("useful variable func IR: -------------\n");
   // print_IR(funcIR);
+  loop_optimization(&cfg);
   fclose(stdout);
 }
 int lab5_work(const char* srcIRFile,const char *dstIRFile){

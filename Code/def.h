@@ -31,9 +31,10 @@ struct VarNameListNode {
   struct ParamListNode* nextParam;
 };*/
 struct IROpr {
-  enum { IROPR_DEFVAR = 0, IROPR_TMPVAR, IROPR_NUM, IROPR_LABEL,IROPR_FUNC } oprType;
+  enum { IROPR_DEFVAR = 0, IROPR_NUM, IROPR_LABEL,IROPR_FUNC } oprType;
   int val;
   bool addrOf;
+  bool isTmpVar;
 };
 
 struct FuncNode {

@@ -26,9 +26,10 @@ void can_not_translate(){
 
 struct IROpr new_tmp_var(){
   struct IROpr ret;
-  ret.oprType=IROPR_TMPVAR;
-  ret.val=tmpVarCount++;
+  ret.oprType=IROPR_DEFVAR;
+  ret.val=defVarCount++;
   ret.addrOf=false;
+  ret.isTmpVar=true;
   return ret;
 }
 struct IROpr new_def_var(){
@@ -36,19 +37,20 @@ struct IROpr new_def_var(){
   ret.oprType=IROPR_DEFVAR;
   ret.val=defVarCount++;
   ret.addrOf=false;
+  ret.isTmpVar=false;
   return ret;
 }
 struct IROpr new_num(int v){
-  return (struct IROpr){IROPR_NUM,v,false};
+  return (struct IROpr){IROPR_NUM,v,false,false};
 }
 struct IROpr new_label(){
-  return (struct IROpr){IROPR_LABEL,labelCount++,false};
+  return (struct IROpr){IROPR_LABEL,labelCount++,false,false};
 }
 struct IROpr new_func(){
-  return (struct IROpr){IROPR_FUNC,funcCount++,false};
+  return (struct IROpr){IROPR_FUNC,funcCount++,false,false};
 }
 struct IROpr get_addr_of_var(struct IROpr varIROpr){
-  assert(varIROpr.oprType==IROPR_DEFVAR||varIROpr.oprType==IROPR_TMPVAR);
+  assert(varIROpr.oprType==IROPR_DEFVAR);
   varIROpr.addrOf=true;
   return varIROpr;
 }
@@ -413,7 +415,7 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
     return cat_IRList(2,t.irList,code);
   }
   else if(childrens_are(exp,"Exp RELOP Exp")||childrens_are(exp,"Exp AND Exp")||childrens_are(exp,"Exp OR Exp")||childrens_are(exp,"NOT Exp")){
-    if(!hasPlace)place=(struct IROpr){IROPR_TMPVAR,0,0};
+    if(!hasPlace)place=(struct IROpr){IROPR_DEFVAR,0,0,true};
     struct IROpr l1=new_label(),l2=new_label();
     struct IRListPair code0=new_single_IRList(IRTYPE_ASSIGN,2,place,new_num(0));
     struct IRListPair code1=cond2IR(exp,l1,l2);
@@ -426,8 +428,9 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
     }
     struct IROpr funcIROpr=find_name(funcRoot,get_kth_child(exp,1)->detail)->outPtr.funcInfo.irOpr;
     if(!hasPlace){
-      place.oprType=IROPR_TMPVAR;
+      place.oprType=IROPR_DEFVAR;
       place.val=0;
+      place.isTmpVar=true;
     }
     return new_single_IRList(IRTYPE_CALL,2,place,funcIROpr);
   }
@@ -446,8 +449,9 @@ struct IRListPair Exp2IR(struct TreeNode* exp,struct IROpr place,bool hasPlace){
        code=cat_IRList(2,code,new_single_IRList(IRTYPE_ARG,1,o->irOpr));
     }
     if(!hasPlace){
-      place.oprType=IROPR_TMPVAR;
+      place.oprType=IROPR_DEFVAR;
       place.val=0;
+      place.isTmpVar=true;
     }
     code=cat_IRList(2,code,new_single_IRList(IRTYPE_CALL,2,place,funcIROpr));
     return code;
@@ -513,7 +517,7 @@ struct IRListPair CompSt2IR(struct TreeNode *compst);
 
 struct IRListPair Stmt2IR(struct TreeNode* stmt){
   if(childrens_are(stmt,"Exp SEMI")){
-    return Exp2IR(get_kth_child(stmt,1),(struct IROpr){IROPR_TMPVAR,0,0},false);
+    return Exp2IR(get_kth_child(stmt,1),(struct IROpr){IROPR_DEFVAR,0,0,true},false);
   }
   if(childrens_are(stmt,"CompSt")){
     return CompSt2IR(get_kth_child(stmt,1));
@@ -588,7 +592,7 @@ struct IRListPair FunDec2IR(struct TreeNode *fundec){
   struct TreeNode *id=get_kth_child(fundec,1);
   struct TrieNode *funcTrieNode=find_name(funcRoot,id->detail);
   if(str_equal(id->detail,"main")){
-    funcTrieNode->outPtr.funcInfo.irOpr=(struct IROpr){IROPR_FUNC,0,0};
+    funcTrieNode->outPtr.funcInfo.irOpr=(struct IROpr){IROPR_FUNC,0,0,false};
   }
   else{
     funcTrieNode->outPtr.funcInfo.irOpr=new_func();
@@ -631,11 +635,10 @@ struct IRListPair Program2IR(struct TreeNode *program){
 void print_IROpr(struct IROpr iropr){
   if(iropr.addrOf==true)printf("&");
   switch (iropr.oprType) {
-    case IROPR_DEFVAR:
-      printf("v%d",iropr.val);
-      break;
-    case IROPR_TMPVAR:
-      printf("t%d",iropr.val);
+    case IROPR_DEFVAR:{
+      if(iropr.isTmpVar==true)printf("t%d",iropr.val);
+      else printf("v%d",iropr.val);
+    }
       break;
     case IROPR_LABEL:
       printf("label%d",iropr.val);

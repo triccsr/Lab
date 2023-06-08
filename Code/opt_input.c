@@ -13,19 +13,19 @@ int lab5VarCount=0,lab5LabelCount=0,lab5FunctionCount=0,lab5TmpCount;
 bool str_equal(const char s1[],const char s2[]);
 
 struct IROpr lab5_new_var(){
-  return (struct IROpr){IROPR_DEFVAR,lab5VarCount++,false};
+  return (struct IROpr){IROPR_DEFVAR,lab5VarCount++,false,false};
 }
 struct IROpr lab5_new_tmp(){
-  return (struct IROpr){IROPR_TMPVAR,lab5TmpCount++,false};
+  return (struct IROpr){IROPR_DEFVAR,lab5TmpCount++,false,true};
 }
 struct IROpr lab5_new_label(){
-  return (struct IROpr){IROPR_LABEL,lab5LabelCount++,false};
+  return (struct IROpr){IROPR_LABEL,lab5LabelCount++,false,false};
 }
 struct IROpr lab5_new_function(){
-  return (struct IROpr){IROPR_FUNC,lab5FunctionCount++,false};
+  return (struct IROpr){IROPR_FUNC,lab5FunctionCount++,false,false};
 }
 struct IROpr lab5_new_num(int v){
-  return (struct IROpr){IROPR_NUM,v,false};
+  return (struct IROpr){IROPR_NUM,v,false,false};
 }
 
 int stoi(const char *s){
@@ -101,7 +101,7 @@ struct IRListPair file_to_IRList(const char fileName[]) {
     else if(str_equal(token[0],"FUNCTION")){// FUNCTION f
       struct TrieNode *funcTrieNode=insert_name(lab5FunctionTrieRoot,token[1]);
       if(str_equal(token[1],"main")){
-        funcTrieNode->outPtr.lab5IROpr=(struct IROpr){IROPR_FUNC,0,false};  
+        funcTrieNode->outPtr.lab5IROpr=(struct IROpr){IROPR_FUNC,0,false,false};  
       }
       else{
         funcTrieNode->outPtr.lab5IROpr=lab5_new_function();

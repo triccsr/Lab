@@ -40,9 +40,9 @@ struct Cfg function_IR_to_CFG(struct IRListPair funcIR){
       if(iroprs[i].oprType==IROPR_DEFVAR&&iroprs[i].val>res.defVarMaxIndex){
         res.defVarMaxIndex=iroprs[i].val;
       }
-      if(iroprs[i].oprType==IROPR_TMPVAR&&iroprs[i].val>res.tmpVarMaxIndex){
+      /*if(iroprs[i].oprType==IROPR_TMPVAR&&iroprs[i].val>res.tmpVarMaxIndex){
         res.tmpVarMaxIndex=iroprs[i].val;
-      }
+      }*/
     }
   }
 

@@ -16,7 +16,7 @@ struct IROpr lab5_new_var(){
   return (struct IROpr){IROPR_DEFVAR,lab5VarCount++,false,false};
 }
 struct IROpr lab5_new_tmp(){
-  return (struct IROpr){IROPR_DEFVAR,lab5TmpCount++,false,true};
+  return (struct IROpr){IROPR_DEFVAR,lab5VarCount++,false,true};
 }
 struct IROpr lab5_new_label(){
   return (struct IROpr){IROPR_LABEL,lab5LabelCount++,false,false};

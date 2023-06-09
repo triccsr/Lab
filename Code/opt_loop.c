@@ -6,12 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stddef.h>
 #include "cfg.h"
 #include "def.h"
 #include "static_analysis.h"
 #include "list.h"
 #include "bitset.h"
 #include "ir.h"
+#include "opt_input.h"
 void dominate_init_entry_out(struct Cfg cfg,struct CfgNode* cfgNode){
   cfgNode->dominatedBitSet=calloc(get_bitset_len(cfg.size),sizeof(uint64_t));
   bitset_modify(cfgNode->dominatedBitSet,cfgNode->index,1);
@@ -46,7 +48,7 @@ void dominate_update_out_from_in(struct Cfg cfg,struct CfgNode* cfgNode){
 void get_dominated_sets(struct Cfg cfg){
   freopen("/dev/tty","w",stdout);
   forward_analysis(cfg,dominate_init,dominate_init_entry_out,dominate_update_in,dominate_update_out_from_in);
-  for(struct CfgNode* cfgNode=cfg.entry;cfgNode!=cfg.exit->nextCfgNode;cfgNode=cfgNode->nextCfgNode){
+  /*for(struct CfgNode* cfgNode=cfg.entry;cfgNode!=cfg.exit->nextCfgNode;cfgNode=cfgNode->nextCfgNode){
     printf("%p index:%d, prev:%p next:%p\n",cfgNode,cfgNode->index,cfgNode->prevCfgNode,cfgNode->nextCfgNode);
     printf("Code=\n");
     print_IR(cfgNode->basicBlock);
@@ -72,11 +74,17 @@ void get_dominated_sets(struct Cfg cfg){
       }
     }
     printf("\n----------------\n");
-  }
+  }*/
   fclose(stdout);
 }
 
 bool is_dominated_by(struct CfgNode* slave,struct CfgNode *master){
+  if(master==NULL||master->dominatedBitSet==NULL){
+    return false;
+  }
+  if(slave==NULL||slave->dominatedBitSet==NULL){//cannot reach slave
+    return true;
+  }
   return bitset_get(slave->dominatedBitSet,master->index);
 }
 
@@ -136,32 +144,41 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
       switch (ir->irType) {
         case IRTYPE_ASSIGN:
         case IRTYPE_VL:
-          list_append(&defOfVars[ir->x.val],(void*)ir);
-          list_append(&useOfVars[ir->y.val],(void*)ir);
+          if(ir->x.oprType==IROPR_DEFVAR)
+            list_append(&defOfVars[ir->x.val],(void*)ir);
+          if(ir->y.oprType==IROPR_DEFVAR)
+            list_append(&useOfVars[ir->y.val],(void*)ir);
           break;
         case IRTYPE_PLUS:
         case IRTYPE_MINUS:
         case IRTYPE_MUL:
         case IRTYPE_DIV:
-          list_append(&defOfVars[ir->x.val],(void*)ir);
+          if(ir->x.oprType==IROPR_DEFVAR)
+            list_append(&defOfVars[ir->x.val],(void*)ir);
+          if(ir->y.oprType==IROPR_DEFVAR)
           list_append(&useOfVars[ir->y.val],(void*)ir);
+          if(ir->z.oprType==IROPR_DEFVAR)
           list_append(&useOfVars[ir->z.val],(void*)ir);
           break;
         case IRTYPE_LV:
         case IRTYPE_IFGOTO:
-          list_append(&useOfVars[ir->x.val],ir);
-          list_append(&useOfVars[ir->y.val],ir);
+          if(ir->x.oprType==IROPR_DEFVAR)
+            list_append(&useOfVars[ir->x.val],ir);
+          if(ir->y.oprType==IROPR_DEFVAR)
+            list_append(&useOfVars[ir->y.val],ir);
           break;
         case IRTYPE_CALL:
         case IRTYPE_ARG:
         case IRTYPE_WRITE:
         case IRTYPE_RETURN:
-          list_append(&useOfVars[ir->x.val],ir);
+          if(ir->x.oprType==IROPR_DEFVAR)
+            list_append(&useOfVars[ir->x.val],ir);
           break;
         case IRTYPE_FUNC:
         case IRTYPE_READ:
         case IRTYPE_PARAM:
-          list_append(&defOfVars[ir->x.val],ir);
+          if(ir->x.oprType==IROPR_DEFVAR)
+            list_append(&defOfVars[ir->x.val],ir);
           break; 
         default:
           break;
@@ -182,7 +199,7 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
       list_append(&exits,(void*)cfgNode);
     }
   }
-  struct List moveOutIRs=new_list();
+  struct List moveFrontIRs=new_list();
   for(int var=0;var<=cfg->defVarMaxIndex;++var){
     if(defOfVars[var].size==1){
       struct IRNode *ir=(struct IRNode*)defOfVars[var].listHead->infoPtr;
@@ -217,7 +234,7 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
         case IRTYPE_ASSIGN:
         case IRTYPE_VL:{
           if(ir->y.oprType==IROPR_NUM||defOfVars[ir->y.val].size==0){
-            list_append(&moveOutIRs,ir);
+            list_append(&moveFrontIRs,ir);
           }
           break;
         }
@@ -226,7 +243,7 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
         case IRTYPE_MUL:
         case IRTYPE_DIV:
           if((ir->y.oprType==IROPR_NUM||defOfVars[ir->y.val].size==0)&&(ir->z.oprType==IROPR_NUM||defOfVars[ir->z.val].size==0)){
-            list_append(&moveOutIRs,ir);
+            list_append(&moveFrontIRs,ir);
           }
           break;
         default:
@@ -234,15 +251,43 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
       } 
     }
   }
-  if(moveOutIRs.size>0){
+  if(moveFrontIRs.size>0){
     struct CfgNode *newCfgNode=new_CfgNode(cfg);
-    struct IRNode *newIRHead=NULL,*newIRTail=NULL;
-    for(struct ListNode *listNode=moveOutIRs.listHead;listNode!=NULL;listNode=listNode->next){
+
+    struct IRNode *newLabelIRNode=calloc(1,sizeof(struct IRNode));
+    newLabelIRNode->inCfgNode=newCfgNode;
+    newLabelIRNode->argNum=1;
+    newLabelIRNode->deleted=false;
+    newLabelIRNode->irType=IRTYPE_LABEL;
+    newLabelIRNode->nxt=newLabelIRNode->prv=NULL;
+    newLabelIRNode->x=lab5_new_label();
+    cfg->labelNum+=1;
+
+    struct IRNode *newIRHead=newLabelIRNode,*newIRTail=newLabelIRNode;
+    bool inserted=false;
+    /*for(struct IRNode *ir=loopStart->basicBlock.head;ir!=loopStart->basicBlock.tail->nxt;ir=ir->nxt){
+      if(ir->irType!=IRTYPE_LABEL){//insert in front of ir
+        inserted=true;
+        newIRHead->prv=ir->prv;
+        ir->prv->nxt=newIRHead;
+        newIRTail->nxt=ir;
+        ir->prv=newIRTail;
+        break;
+      }
+    }
+    if(!inserted){//then insert them behind tail
+      newIRTail->nxt=loopStart->basicBlock.tail->nxt;
+      loopStart->basicBlock.tail->nxt->prv=newIRTail;
+      loopStart->basicBlock.tail->nxt=newIRHead;
+      newIRHead->prv=loopStart->basicBlock.tail;
+    }*/
+    for(struct ListNode *listNode=moveFrontIRs.listHead;listNode!=NULL;listNode=listNode->next){
       struct IRNode *ir=(struct IRNode*)listNode->infoPtr;
       struct IRNode *newIR=calloc(1,sizeof(struct IRNode));
       memcpy(newIR,ir,sizeof(struct IRNode)); 
       ir->deleted=true;
       newIR->inCfgNode=newCfgNode;
+      //newIR->inCfgNode=loopStart;
       newIR->deleted=false;
       if(newIRHead==NULL){
         newIR->nxt=newIR->prv=NULL;
@@ -251,6 +296,7 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
       else{
         newIR->nxt=NULL;
         newIR->prv=newIRTail;
+        newIRTail->nxt=newIR;
         newIRTail=newIR;
       }
     }
@@ -282,10 +328,29 @@ void optimize_a_loop(struct Cfg* cfg,struct CfgNode* loopStart,struct CfgNode *l
         }
         e->isDeleted=true;
         add_cfg_edge(pred,newCfgNode);
+        for(struct IRNode *jIR=pred->basicBlock.tail;jIR->irType==IRTYPE_GOTO||jIR->irType==IRTYPE_IFGOTO;jIR=jIR->prv){// all jumps of pred cfgNode
+          if(jIR->irType==IRTYPE_GOTO){
+            for(struct IRNode *lIR=loopStart->basicBlock.head;lIR->irType==IRTYPE_LABEL;lIR=lIR->nxt){
+              if(jIR->x.val==lIR->x.val){
+                jIR->x.val=newLabelIRNode->x.val;
+                break;
+              }
+            }
+          }
+          else{//IFGOTO
+            for(struct IRNode *lIR=loopStart->basicBlock.head;lIR->irType==IRTYPE_LABEL;lIR=lIR->nxt){
+              if(jIR->z.val==lIR->x.val){
+                jIR->z.val=newLabelIRNode->x.val;
+                break;
+              }
+            }
+          }
+        }
       }
     }
     add_cfg_edge(newCfgNode,loopStart);
   }
+  
 }
 void loop_optimization(struct Cfg *cfg){
   get_dominated_sets(*cfg);

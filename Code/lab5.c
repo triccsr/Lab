@@ -27,9 +27,9 @@ void optimize_func_IR(struct IRListPair funcIR){
 int lab5_work(const char* srcIRFile,const char *dstIRFile){
   struct IRListPair ir=file_to_IRList(srcIRFile);
   //printf("input IR: -------------\n");
-  freopen("unoptimized.ir","w",stdout);
+  /*freopen("unoptimized.ir","w",stdout);
   print_IR(ir);
-  fclose(stdout);
+  fclose(stdout);*/
   struct IRListPair funcIR=(struct IRListPair){NULL,NULL};
   for(struct IRNode *irNode=ir.head;irNode!=NULL;irNode=irNode->nxt){
     if(irNode->irType==IRTYPE_FUNC){
